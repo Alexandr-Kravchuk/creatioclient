@@ -94,9 +94,8 @@ HTTP status, the observed count and the limit, and the partial file is deleted. 
 file too: read the status from the response and the server's message from the file. The ceiling is not
 retried, because another attempt re-downloads the same oversized body.
 
-This method is available on `CreatioClient` only. It is deliberately absent from `IAsyncCreatioClient`:
-an external implementation of that published interface which lacks a newly added member fails to load with
-a `TypeLoadException`, so the interface stays closed and the release stays additive.
+This method is available on `CreatioClient` only: `IAsyncCreatioClient` is closed, because an external
+implementation of it that lacks a newly added member fails to load with a `TypeLoadException`.
 
 The caller owns every `HttpResponseMessage` returned by an async operation and must dispose it.
 `CreatioClient` owns its shared `HttpClient` and should also be disposed when it is no longer needed.

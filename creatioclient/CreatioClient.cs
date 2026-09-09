@@ -801,11 +801,7 @@ namespace Creatio.Client
 		/// subject to the client's retry policy.
 		/// </para>
 		/// <para>
-		/// Deliberately concrete-only. Adding a member to the already published <see cref="IAsyncCreatioClient"/>
-		/// would break every external implementation of it: an implementer that supplies every previously
-		/// released member but not this one fails to load with a <c>TypeLoadException</c>. Exposing the ceiling
-		/// here keeps the release additive, and a derived capability interface can still be added later without
-		/// a break - removing an interface member could not.
+		/// Concrete-only: this member is intentionally absent from <see cref="IAsyncCreatioClient"/>.
 		/// </para>
 		/// </remarks>
 		/// <param name="url">Absolute or application-relative URL to GET.</param>

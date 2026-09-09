@@ -99,10 +99,6 @@ public class PublicApiCompatibilityTests
 	[Test]
 	public void IAsyncCreatioClient_ShouldAddCancellationAwareResponsesWithoutChangingLegacyInterface()
 	{
-		// The set is FROZEN and asserted for equality, not containment. An external implementation of the
-		// published interface that supplies every member listed here but not a newly added one fails to load
-		// with a TypeLoadException, and a containment assertion cannot see that: it passes for any superset.
-		// A new capability therefore goes on CreatioClient, or on a derived interface, never in this list.
 		string[] frozen = {
 			"System.Threading.Tasks.Task<System.Net.Http.HttpResponseMessage> CallConfigurationServiceAsync(System.String serviceName, System.String serviceMethod, System.String requestData, System.Int32 requestTimeout=100000, System.Threading.CancellationToken cancellationToken=)",
 			"System.Threading.Tasks.Task<System.Net.Http.HttpResponseMessage> DownloadAttachmentAsync(System.String schemaName, System.Guid recordId, System.String filePath, System.Int32 timeout=100000, System.Threading.CancellationToken cancellationToken=)",
