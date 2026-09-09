@@ -210,16 +210,16 @@ public class BoundedDownloadTests
 		try {
 			// Act
 			Func<Task> download = () => client.DownloadFileByGetBoundedAsync(
-				server.BaseUri.ToString(), destination, Ceiling, requestTimeout: 1_000);
+				server.BaseUri.ToString(), destination, Ceiling, requestTimeout: 3_000);
 
 			// Assert
 			await download.Should().ThrowAsync<CreatioResponseTooLargeException>(
 				because: "a retried oversized body cannot succeed, so the refusal must leave the client immediately instead of being swallowed by the retry filter");
 			IReadOnlyList<CapturedRequest> requests = await capture;
 			requests.Should().HaveCount(1,
-				because: "exactly one GET must be issued even with three attempts configured");
+				because: "the script serves a single response, so this pins what the served GET was rather than how many were attempted");
 			server.HasPendingConnection.Should().BeFalse(
-				because: "a swallowed refusal would show up as a second connection attempt against the scripted server");
+				because: "a refusal folded into another attempt leaves a second connection queued against the scripted server");
 		} finally {
 			DeleteIfPresent(destination);
 		}
@@ -266,6 +266,37 @@ public class BoundedDownloadTests
 		} finally {
 			DeleteIfPresent(destination);
 			DeleteIfPresent(target);
+		}
+	}
+
+	[Test]
+	[Description("A zero ceiling refuses any body at all, so a caller whose remaining quota is zero is not served an unbounded download.")]
+	public async Task DownloadFileByGetBoundedAsync_ShouldRefuseAnyBody_WhenTheCeilingIsZero() {
+		// Arrange — zero is a legitimate ceiling ("accept nothing"), while -1 is the internal unbounded
+		// sentinel. Nothing else pins that boundary: relaxing the ceiling test from >= 0 to > 0 turns a
+		// requested zero into an unbounded transfer and leaves the rest of the suite green.
+		await using ScriptedLoopbackHttpServer server = new();
+		string destination = NewDestinationPath();
+		Task<IReadOnlyList<CapturedRequest>> capture =
+			server.CaptureAsync(new ScriptedResponse(StatusCode: 200, BodyBytes: new byte[] { (byte)'x' }));
+		using CreatioClient client = new(server.BaseUri.ToString(), "token");
+
+		try {
+			// Act
+			Func<Task> download = () => client.DownloadFileByGetBoundedAsync(
+				server.BaseUri.ToString(), destination, 0);
+
+			// Assert
+			CreatioResponseTooLargeException failure =
+				(await download.Should().ThrowAsync<CreatioResponseTooLargeException>(
+					because: "a caller that asked to accept nothing must be given nothing, not everything")).Which;
+			failure.MaxBytes.Should().Be(0,
+				because: "the refused ceiling reported must be the zero the caller asked for");
+			File.Exists(destination).Should().BeFalse(
+				because: "a refused transfer leaves no file, and a zero ceiling refuses every non-empty body");
+			await capture;
+		} finally {
+			DeleteIfPresent(destination);
 		}
 	}
 

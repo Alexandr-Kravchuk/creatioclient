@@ -128,6 +128,10 @@ public class PublicApiCompatibilityTests
 			because: "an external implementation of the published IAsyncCreatioClient that lacks a newly added "
 			+ "member throws TypeLoadException at load time, so this interface is closed: put a new capability "
 			+ "on CreatioClient or on a derived interface instead of extending this list");
+		typeof(IAsyncCreatioClient).GetProperties().Should().BeEmpty(
+			because: "a property added to the published interface breaks an external implementation exactly as a method does, and the frozen method set cannot see one");
+		typeof(IAsyncCreatioClient).GetEvents().Should().BeEmpty(
+			because: "an event added to the published interface breaks an external implementation exactly as a method does, and the frozen method set cannot see one");
 		typeof(ICreatioClient).GetMethods().Should().NotContain(
 			method => method.ReturnType == typeof(Task<HttpResponseMessage>),
 			because: "adding abstract members to the established interface would break existing implementers");
