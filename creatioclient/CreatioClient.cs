@@ -783,7 +783,38 @@ namespace Creatio.Client
 			int requestTimeout = 100000, CancellationToken cancellationToken = default(CancellationToken)) =>
 			DownloadToFileAsync(HttpMethod.Get, url, filePath, null, requestTimeout, cancellationToken);
 
-		/// <inheritdoc />
+		/// <summary>
+		/// Downloads a GET response to <paramref name="filePath"/> and refuses a body larger than
+		/// <paramref name="maxBytes"/>.
+		/// </summary>
+		/// <remarks>
+		/// <para>
+		/// Unlike <see cref="DownloadFileByGetAsync"/>, EVERY status streams through the same byte-counting
+		/// copy loop: an error body is written to the file too, so a caller reads the status from the response
+		/// and the server's actual message from the file. The unbounded overload buffers a final non-success
+		/// body into memory and writes no file, which leaves a caller with nothing to read and no ceiling.
+		/// </para>
+		/// <para>
+		/// The ceiling is enforced before each write, so the file never exceeds it and at most one buffer past
+		/// it is read off the socket; a crossing throws <see cref="CreatioResponseTooLargeException"/> and the
+		/// partial file is removed. Because retrying an oversized body cannot succeed, the ceiling is not
+		/// subject to the client's retry policy.
+		/// </para>
+		/// <para>
+		/// Deliberately concrete-only. Adding a member to the already published <see cref="IAsyncCreatioClient"/>
+		/// would break every external implementation of it: an implementer that supplies every previously
+		/// released member but not this one fails to load with a <c>TypeLoadException</c>. Exposing the ceiling
+		/// here keeps the release additive, and a derived capability interface can still be added later without
+		/// a break - removing an interface member could not.
+		/// </para>
+		/// </remarks>
+		/// <param name="url">Absolute or application-relative URL to GET.</param>
+		/// <param name="filePath">Destination path; overwritten.</param>
+		/// <param name="maxBytes">Maximum body bytes to accept. Zero or greater.</param>
+		/// <param name="requestTimeout">Deadline in milliseconds across send and every body read.</param>
+		/// <param name="cancellationToken">Cancels the transfer.</param>
+		/// <exception cref="CreatioResponseTooLargeException">The body reached <paramref name="maxBytes"/>.</exception>
+		/// <exception cref="ArgumentOutOfRangeException"><paramref name="maxBytes"/> is negative.</exception>
 		public Task<HttpResponseMessage> DownloadFileByGetBoundedAsync(string url, string filePath,
 			long maxBytes, int requestTimeout = 100000,
 			CancellationToken cancellationToken = default(CancellationToken))
